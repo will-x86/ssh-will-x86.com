@@ -1,10 +1,5 @@
-# Go dev env Template
+# Personal website
 
-A basic Go dev env with common tools including:
-- go
-- gopls
-- gotools
-- go-outline
-- gopkgs
-- godef
-- golint
+This is the code behind my personal website
+
+Once it's deployed, it'll be ran via ssh'ing into the URL
