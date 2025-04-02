@@ -13,7 +13,7 @@ jobs:
           go get .
           mkdir build
           cp projects.txt build/
-          go build . -o build/build
+          go build -o build/build . 
           sudo systemctl daemon-reload
           sudo systemctl restart ssh-will-x86.com
 
