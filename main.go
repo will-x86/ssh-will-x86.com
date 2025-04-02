@@ -9,10 +9,9 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
-
-	lorem "github.com/derektata/lorem/ipsum"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -32,6 +31,18 @@ const (
 	port         = "23234"
 	headerHeight = 1
 	footerHeight = 1
+	homeText     = `
+Intro:
+Hi, I'm will-x86, and this is my personal website (sshite?).
+I've been developing software since early 2018 & mainly work with Go & Rust.
+More recently I've been open to other technologies, 
+primarily micro-electronics and front-end (Next/React).
+
+About myself:
+- I self-host, from Ollama to Immich I love it all
+- I'm a University student in the UK
+- Serverless technologies fascinate me, though I go bare metal for my deployments 
+`
 )
 
 func main() {
@@ -87,33 +98,23 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	txtStyle := renderer.NewStyle().Foreground(lipgloss.Color("10"))
 	quitStyle := renderer.NewStyle().Foreground(lipgloss.Color("15"))
 	headerStyle := renderer.NewStyle().Bold(true).Background(lipgloss.Color("62")).PaddingLeft(2)
-	blogPosts := []BlogPost{
-		{
-			title:   "first",
-			content: getBlogContent(),
-			number:  0,
-		},
-		{
-			title:   "2nd",
-			content: getBlogContent(),
-			number:  1,
-		},
-		{
-			title:   "3ds",
-			content: getBlogContent(),
-			number:  2,
-		},
+	projectsPosts, err := loadProjects()
+	if err != nil {
+		log.Error("Failed to load projects", "error", err)
+		// Fall back to empty projects list
+		projectsPosts = []Projects{}
 	}
-	items := make([]list.Item, len(blogPosts))
-	for i, post := range blogPosts {
+
+	items := make([]list.Item, len(projectsPosts))
+	for i, post := range projectsPosts {
 		items[i] = post
 	}
 	delegate := list.NewDefaultDelegate()
-	blogList := list.New(items, delegate, pty.Window.Width, contentHeight-2)
-	blogList.SetShowHelp(false)
-	blogList.SetShowTitle(false)
-	blogList.SetFilteringEnabled(false)
-	blogList.Styles.PaginationStyle = lipgloss.NewStyle()
+	projectsList := list.New(items, delegate, pty.Window.Width, contentHeight-2)
+	projectsList.SetShowHelp(false)
+	projectsList.SetShowTitle(false)
+	projectsList.SetFilteringEnabled(false)
+	projectsList.Styles.PaginationStyle = lipgloss.NewStyle()
 
 	bg := "light"
 	if renderer.HasDarkBackground() {
@@ -122,49 +123,39 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	vp := viewport.New(pty.Window.Width, contentHeight)
 	vp.Style = renderer.NewStyle().Border(lipgloss.RoundedBorder())
 	m := model{
-		term:        pty.Term,
-		profile:     renderer.ColorProfile().Name(),
-		width:       pty.Window.Width,
-		height:      pty.Window.Height,
-		bg:          bg,
-		txtStyle:    txtStyle,
-		quitStyle:   quitStyle,
-		headerStyle: headerStyle,
-		viewport:    vp,
-		content:     getBlogContent(),
-		blogPosts:   blogPosts,
-		inBlogList:  true,
-		blogList:    blogList,
+		term:           pty.Term,
+		profile:        renderer.ColorProfile().Name(),
+		width:          pty.Window.Width,
+		height:         pty.Window.Height,
+		bg:             bg,
+		txtStyle:       txtStyle,
+		quitStyle:      quitStyle,
+		headerStyle:    headerStyle,
+		viewport:       vp,
+		content:        "",
+		projectsPosts:  projectsPosts,
+		inProjectsList: true,
+		projectsList:   projectsList,
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
 
-func getBlogContent() string {
-	g := lorem.NewGenerator()
-	g.SentencesPerParagraph = 5
-	var b string
-	for range 100 {
-		b += g.Generate(5) + "\n"
-	}
-	return b
-}
-
 type model struct {
-	term         string
-	state        string
-	profile      string
-	width        int
-	height       int
-	bg           string
-	txtStyle     lipgloss.Style
-	quitStyle    lipgloss.Style
-	headerStyle  lipgloss.Style
-	viewport     viewport.Model
-	content      string
-	blogPosts    []BlogPost
-	selectedPost *BlogPost
-	inBlogList   bool
-	blogList     list.Model
+	term           string
+	state          string
+	profile        string
+	width          int
+	height         int
+	bg             string
+	txtStyle       lipgloss.Style
+	quitStyle      lipgloss.Style
+	headerStyle    lipgloss.Style
+	viewport       viewport.Model
+	content        string
+	projectsPosts  []Projects
+	selectedPost   *Projects
+	inProjectsList bool
+	projectsList   list.Model
 }
 
 var (
@@ -173,15 +164,65 @@ var (
 	listStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#874BFD")).Padding(0, 0)
 )
 
-type BlogPost struct {
-	title   string
-	content string
-	number  int
+type ProjectsFile struct {
+	Projects []Projects `json:"projects"`
 }
 
-func (b BlogPost) Title() string       { return fmt.Sprintf("%d. %s", b.number, b.title) }
-func (b BlogPost) Description() string { return b.content[:100] + "..." }
-func (b BlogPost) FilterValue() string { return b.title }
+func loadProjects() ([]Projects, error) {
+	data, err := os.ReadFile("projects.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	// Split the file by project separator
+	projectTexts := strings.Split(string(data), "---")
+	var projects []Projects
+
+	for _, text := range projectTexts {
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+
+		// Parse each project
+		lines := strings.Split(strings.TrimSpace(text), "\n")
+		var project Projects
+		var contentLines []string
+
+		for i, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "Title:") {
+				project.ProjectTitle = strings.TrimSpace(strings.TrimPrefix(line, "Title:"))
+			} else if strings.HasPrefix(line, "Number:") {
+				num, _ := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(line, "Number:")))
+				project.ProjectNumber = num
+			} else if line != "" || i > 2 { // After title and number, collect content
+				contentLines = append(contentLines, line)
+			}
+		}
+
+		project.ProjectContent = strings.TrimSpace(strings.Join(contentLines, "\n"))
+		if project.ProjectTitle != "" { // Only add if we have at least a title
+			projects = append(projects, project)
+		}
+	}
+
+	return projects, nil
+}
+
+type Projects struct {
+	ProjectTitle   string `json:"title"`
+	ProjectContent string `json:"content"`
+	ProjectNumber  int    `json:"number"`
+}
+
+func (p Projects) Title() string { return fmt.Sprintf("%d. %s", p.ProjectNumber, p.ProjectTitle) }
+func (p Projects) Description() string {
+	if len(p.ProjectContent) > 100 {
+		return p.ProjectContent[:100] + "..."
+	}
+	return p.ProjectContent
+}
+func (p Projects) FilterValue() string { return p.ProjectTitle }
 func (m model) Init() tea.Cmd {
 	return nil
 }
@@ -194,8 +235,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.viewport.Width = msg.Width
 		m.viewport.Height = msg.Height - headerHeight - footerHeight
-		m.blogList.SetWidth(msg.Width)
-		m.blogList.SetHeight(msg.Height - headerHeight - footerHeight - 2)
+		m.projectsList.SetWidth(msg.Width)
+		m.projectsList.SetHeight(msg.Height - headerHeight - footerHeight - 2)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -215,13 +256,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			m.state = "home"
 		case "backspace":
-			if m.state == "blog" && !m.inBlogList {
-				m.inBlogList = true
+			if m.state == "projects" && !m.inProjectsList {
+				m.inProjectsList = true
 				m.selectedPost = nil
 			}
-		case "b":
-			m.state = "blog"
-			m.viewport.SetContent(getBlogContent())
+		case "p":
+			m.state = "projects"
+			m.inProjectsList = true
 		case "r":
 			m.state = "resume"
 			m.viewport.SetContent(getResumeContent())
@@ -229,21 +270,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = "contact"
 			m.viewport.SetContent(getContactContent())
 		case "enter":
-			if m.state == "blog" && m.inBlogList {
-				if i, ok := m.blogList.SelectedItem().(BlogPost); ok {
+			if m.state == "projects" && m.inProjectsList {
+				if i, ok := m.projectsList.SelectedItem().(Projects); ok {
 					m.selectedPost = &i
-					m.inBlogList = false
-					m.viewport.SetContent(i.content)
+					m.inProjectsList = false
+					m.viewport.SetContent(i.ProjectContent)
 					m.viewport.GotoTop()
-
 				}
 			}
 		default:
-			if m.state == "blog" && m.inBlogList {
-				if num, err := strconv.Atoi(msg.String()); err == nil && num >= 0 && num < len(m.blogPosts) {
-					m.selectedPost = &m.blogPosts[num]
-					m.inBlogList = false
-					m.viewport.SetContent(m.selectedPost.content)
+			if m.state == "projects" && m.inProjectsList {
+				if num, err := strconv.Atoi(msg.String()); err == nil && num >= 0 && num < len(m.projectsPosts) {
+					m.selectedPost = &m.projectsPosts[num]
+					m.inProjectsList = false
+					m.viewport.SetContent(m.selectedPost.ProjectContent)
 					m.viewport.GotoTop()
 
 				}
@@ -251,10 +291,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		}
 	}
-	if m.state == "blog" {
-		if m.inBlogList {
+	if m.state == "projects" {
+		if m.inProjectsList {
 			var cmd tea.Cmd
-			m.blogList, cmd = m.blogList.Update(msg)
+			m.projectsList, cmd = m.projectsList.Update(msg)
 			cmds = append(cmds, cmd)
 		} else {
 			var cmd tea.Cmd
@@ -266,11 +306,39 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func getResumeContent() string {
-	return "resume"
+	return `
+EDUCATION
+University Of ******** (2027)
+BSc Computer Science with Artificial Intelligence- *******, UK
+
+WORK EXPERIENCE
+Current - Software Developer (2025) 
+***** and **** - ******** , UK
+• Rust developer
+• Continuation of below
+
+Software Development Internship (2024)
+***** and **** - ******** , UK
+• Core Rust developer for CO2 recording software
+• Implemented cross-platform release workflow
+• Designed and created HTTP server/DB infrastructure
+
+TECHNICAL SKILLS
+Primary:
+• GoLang, Rust, Devops, Linux
+Secondary:
+• Python, Java, React, NodeJS, Embedded Systems(C++)
+
+INTERESTS
+Hackathons, Weightlifting, Running, 3D Printing, Electronics
+`
 }
 
 func getContactContent() string {
-	return "contact idk@bob.com"
+	return `
+Email: w@willx86.com
+Github: github.com/will-x86
+    `
 }
 
 func (m model) View() string {
@@ -287,11 +355,11 @@ func (m model) View() string {
 	case "home":
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
-			Render("Welcome to my personal website!")
-	case "blog":
-		if m.inBlogList {
+			Render(homeText)
+	case "projects":
+		if m.inProjectsList {
 			content = contentStyle.
-				Render(m.blogList.View())
+				Render(m.projectsList.View())
 		} else if m.selectedPost != nil {
 			content = contentStyle.
 				Render(m.viewport.View())
@@ -310,11 +378,11 @@ func (m model) View() string {
 			Render("Welcome! Use the controls below to navigate.")
 	}
 
-	controls := m.quitStyle.Render("q: quit • o: home • b: blog • r: resume • c: contact")
-	if m.state == "blog" && m.inBlogList {
+	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • c: contact")
+	if m.state == "projects" && m.inProjectsList {
 		controls += m.quitStyle.Render(" • [0-9]: select post")
 	}
-	if m.state == "blog" && !m.inBlogList {
+	if m.state == "projects" && !m.inProjectsList {
 		controls += m.quitStyle.Render(" • backspace: back to posts • j/k | d/u | up/down to scroll")
 	}
 

@@ -1,0 +1,29 @@
+---
+Title: SSH-personal website
+Number: 0
+
+- Personal website written in GoLang with Charm.sh's Wish and Bubble libraries.
+- Uses simple markdown parsing for projects, as ease of addition is a large factor to me updating this site.
+- github.com/will-x86/ssh-will-x86.com
+
+---
+Title: AWS Lambda recreation (Kappa) 
+Number: 1
+
+- A re-make of AWS Lambda serverless functions 
+- Supports NodeJs and GoLang for functions
+- As heavily optimized as Docker containers can get
+- github.com/will-x86/kappa
+- Written in Rust & Go 
+
+---
+Title: Kappa (v2) 
+Number: 2
+
+- KappaV1 but using Containerd over docker
+- Uses Containerd to control containers
+- Heavily reduces start up time
+- Basic Dockerfile support 
+- github.com/will-x86/kappa-v2
+- Written in Go
+
