@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -27,8 +28,6 @@ import (
 )
 
 const (
-	host         = "localhost"
-	port         = "23234"
 	headerHeight = 1
 	footerHeight = 1
 	homeText     = `
@@ -45,7 +44,16 @@ About myself:
 `
 )
 
+var (
+	hostFlag = flag.String("host", "0.0.0.0", "Host to listen on (use 0.0.0.0 for remote access)")
+	portFlag = flag.String("port", "22", "Port to listen on (22 for standard SSH)")
+)
+
 func main() {
+	flag.Parse()
+	port := *portFlag
+	host := *hostFlag
+	log.Info("starting server ", "host", host, "port", port)
 	srv, err := wish.NewServer(
 
 		wish.WithAddress(net.JoinHostPort(host, port)),

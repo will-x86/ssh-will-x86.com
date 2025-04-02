@@ -1,0 +1,14 @@
+[Unit]
+Description=Willx86 ssh app
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=roto
+WorkingDirectory=/root/ssh-will-x86.com/
+ExecStart=/root/ssh-will-x86.com/main
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
