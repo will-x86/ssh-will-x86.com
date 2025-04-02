@@ -350,7 +350,7 @@ Github: github.com/will-x86
 }
 
 func (m model) View() string {
-	header := m.headerStyle.Width(m.width).Render("will-x86.com")
+	header := m.headerStyle.Width(m.width).Render("willx86.com")
 
 	contentHeight := m.height - headerHeight - footerHeight
 

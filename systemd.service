@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=root
-Group=roto
-WorkingDirectory=/root/ssh-will-x86.com/
-ExecStart=/root/ssh-will-x86.com/main
+Group=root
+WorkingDirectory=/root/ssh-will-x86.com/build
+ExecStart=/root/ssh-will-x86.com/build/build
 Restart=on-failure
 
 [Install]
