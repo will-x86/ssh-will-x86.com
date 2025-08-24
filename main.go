@@ -41,6 +41,7 @@ About myself:
 - I self-host, from Ollama to Immich I love it all
 - I'm a University student in the UK
 - Serverless technologies fascinate me, though I go bare metal for my deployments 
+- I'm starting to love designing PCB's....
 `
 )
 
@@ -320,10 +321,13 @@ University Of ******** (2027)
 BSc Computer Science with Artificial Intelligence- *******, UK
 
 WORK EXPERIENCE
-Current - Software Developer (2025) 
-***** and **** - ******** , UK
-• Rust developer
-• Continuation of below
+********** Systems Engineer intern (2025)
+• Assembled PCB's via reflow oven etc
+• Start to finish designed and modelled *********
+
+***** ****** Software developer (2025) 
+• Created entire stack, backend to front-end 
+• Project was sensor based 
 
 Software Development Internship (2024)
 ***** and **** - ******** , UK
@@ -335,7 +339,7 @@ TECHNICAL SKILLS
 Primary:
 • GoLang, Rust, Devops, Linux
 Secondary:
-• Python, Java, React, NodeJS, Embedded Systems(C++)
+• STM32CubeIDE with C, Python, Java, React, NodeJS, Arduino C++/ESP-IDF
 
 INTERESTS
 Hackathons, Weightlifting, Running, 3D Printing, Electronics
