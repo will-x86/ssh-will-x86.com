@@ -27,3 +27,10 @@ Number: 2
 - github.com/will-x86/kappa-v2
 - Written in Go
 
+---
+Title: Custom STM32 PCB (v1) 
+Number: 3 
+- Created a custom STM32 PCB for controlling PWM fans 
+- V1 used for controlling the PWN of a Noctua 12V fan 
+- V2 will control a damper based upon CO2 with SPD40 
+- Primarily learning experiment. 
