@@ -269,6 +269,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inProjectsList = true
 				m.selectedPost = nil
 			}
+
+		case "b":
+			m.state = "blog"
+			m.viewport.SetContent(getBlogContent())
 		case "p":
 			m.state = "projects"
 			m.inProjectsList = true
@@ -314,6 +318,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func getBlogContent() string {
+	return `See w.willx86.com
+	Mostly mundane small tutorials, maybe I'll do something more with it one day...`
+}
 func getResumeContent() string {
 	return `
 EDUCATION
@@ -384,13 +392,17 @@ func (m model) View() string {
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
 			Render(getContactContent())
+	case "blog":
+		content = contentStyle.
+			Align(lipgloss.Center, lipgloss.Center).
+			Render(getBlogContent())
 	default:
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("Welcome! Use the controls below to navigate.")
 	}
 
-	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • c: contact")
+	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • b: blog •  c: contact")
 	if m.state == "projects" && m.inProjectsList {
 		controls += m.quitStyle.Render(" • [0-9]: select post")
 	}
