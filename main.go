@@ -232,6 +232,7 @@ type model struct {
 	headerStyle    lipgloss.Style
 	viewport       viewport.Model
 	content        string
+	tooLong        bool
 	projectsPosts  []Projects
 	selectedPost   *Projects
 	inProjectsList bool
@@ -303,7 +304,15 @@ func (p Projects) FilterValue() string { return p.ProjectTitle }
 func (m model) Init() tea.Cmd {
 	return textarea.Blink
 }
-
+func countRune(s string, r rune) int {
+	count := 0
+	for _, c := range s {
+		if c == r {
+			count++
+		}
+	}
+	return count
+}
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
@@ -351,9 +360,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "ctrl+s":
 					content := strings.TrimSpace(m.messageInput.Value())
 					if content != "" {
-						addMessage(m.username, content)
-						m.messageSent = true
-						m.messageInput.Reset()
+						if countRune(content, '\n') >= 10 || len(content) >= 1000 {
+							log.Infof("Message too long :%s", content)
+							m.tooLong = true
+							m.messageInput.Reset()
+						} else {
+							addMessage(m.username, content)
+							m.messageSent = true
+							m.messageInput.Reset()
+						}
 					}
 					return m, nil
 				default:
@@ -442,7 +457,7 @@ func getBlogContent() string {
 	Mostly mundane small tutorials, maybe I'll do something more with it one day...
 	Update! You can now see how I made the "message" feature you can see by pressing 'm'`
 }
-func getMessagesContent(username string, messageSent bool, editingName bool, messageInput textarea.Model, nameInput textinput.Model) string {
+func getMessagesContent(username string, messageSent bool, editingName bool, messageInput textarea.Model, nameInput textinput.Model, tooLong bool) string {
 	if messageSent {
 		return `
 Thank you for your message!
@@ -456,7 +471,11 @@ See https://w.willx86/2025/11/06/printing-messages-from-my-site.html for more de
 Press 'o' to return home or 'm' to send another message.
 `
 	}
-
+	if tooLong {
+		return `
+		Please try again! Your message was too long and or had too many newlines :) paper's expensive yaknow?
+		`
+	}
 	if editingName {
 		return fmt.Sprintf(`
 Leave a message for will-x86
@@ -520,7 +539,7 @@ func (m model) View() string {
 	case "messages":
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Top).
-			Render(getMessagesContent(m.username, m.messageSent, m.editingName, m.messageInput, m.nameInput))
+			Render(getMessagesContent(m.username, m.messageSent, m.editingName, m.messageInput, m.nameInput, m.tooLong))
 	default:
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
