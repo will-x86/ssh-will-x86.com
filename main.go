@@ -98,10 +98,10 @@ func removeMessage(from, content string) {
 }
 
 func main() {
+	flag.Parse()
 	if *secretKey == "" {
 		panic("no key set")
 	}
-	flag.Parse()
 	port := *portFlag
 	host := *hostFlag
 	serverPort := *webServerPort
@@ -367,6 +367,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						} else {
 							addMessage(m.username, content)
 							m.messageSent = true
+							m.tooLong = false
+
 							m.messageInput.Reset()
 						}
 					}
@@ -415,6 +417,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = "messages"
 			m.messageSent = false
 			m.editingName = false
+			m.tooLong = false
 			m.messageInput.Focus()
 		case "enter":
 			if m.state == "projects" && m.inProjectsList {
