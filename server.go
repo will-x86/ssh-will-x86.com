@@ -32,7 +32,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	auth := r.URL.Query().Get("secret")
 	log.Infof("Got auth: %s", auth)
 
-	if auth != sk {
+	if auth != *secretKey {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

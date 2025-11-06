@@ -52,7 +52,7 @@ var (
 	hostFlag      = flag.String("host", "0.0.0.0", "Host to listen on (use 0.0.0.0 for remote access)")
 	portFlag      = flag.String("port", "22", "Port to listen on (22 for standard SSH)")
 	webServerPort = flag.String("webserver-port", "9000", "port for webserver for getting messages")
-	secretKey     = flag.String("sK", "nuhuh", "secretKey for receiving messages")
+	secretKey     = flag.String("sK", os.Getenv("SECRET_KEY"), "secretKey for receiving messages")
 )
 
 type Message struct {
@@ -97,15 +97,13 @@ func removeMessage(from, content string) {
 	}
 }
 
-var (
-	sk string = ""
-)
-
 func main() {
+	if *secretKey == "" {
+		panic("no key set")
+	}
 	flag.Parse()
 	port := *portFlag
 	host := *hostFlag
-	sk = *secretKey
 	serverPort := *webServerPort
 	go WebServer(serverPort)
 	log.Info("starting server ", "host", host, "port", port)
