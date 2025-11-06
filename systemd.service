@@ -1,14 +1,8 @@
-[Unit]
-Description=Willx86 ssh app
-After=network.target
-
 [Service]
 Type=simple
 User=root
 Group=root
 WorkingDirectory=/root/ssh-will-x86.com/build
-ExecStart=/root/ssh-will-x86.com/build/build
+EnvironmentFile=/etc/systemd/system/ssh-will-x86.com.env
+ExecStart=/root/ssh-will-x86.com/build/build -sK ${SECRET_KEY}
 Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target

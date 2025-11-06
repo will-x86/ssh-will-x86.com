@@ -11,10 +11,13 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -46,14 +49,65 @@ About myself:
 )
 
 var (
-	hostFlag = flag.String("host", "0.0.0.0", "Host to listen on (use 0.0.0.0 for remote access)")
-	portFlag = flag.String("port", "22", "Port to listen on (22 for standard SSH)")
+	hostFlag      = flag.String("host", "0.0.0.0", "Host to listen on (use 0.0.0.0 for remote access)")
+	portFlag      = flag.String("port", "22", "Port to listen on (22 for standard SSH)")
+	webServerPort = flag.String("webserver-port", "9000", "port for webserver for getting messages")
+	secretKey     = flag.String("sK", "nuhuh", "secretKey for receiving messages")
+)
+
+type Message struct {
+	From      string
+	Content   string
+	Timestamp time.Time
+}
+
+var (
+	messages   []Message
+	messagesMu sync.RWMutex
+)
+
+func addMessage(from, content string) {
+	messagesMu.Lock()
+	defer messagesMu.Unlock()
+	messages = append(messages, Message{
+		From:      from,
+		Content:   content,
+		Timestamp: time.Now(),
+	})
+	log.Info("New message saved", "from", from, "content", content)
+}
+
+func getMessages() []Message {
+	messagesMu.RLock()
+	defer messagesMu.RUnlock()
+	msgCopy := make([]Message, len(messages))
+	copy(msgCopy, messages)
+	return msgCopy
+}
+
+func removeMessage(from, content string) {
+	messagesMu.Lock()
+	defer messagesMu.Unlock()
+
+	for i := range messages {
+		if messages[i].Content == content && messages[i].From == from {
+			messages = append(messages[:i], messages[i+1:]...)
+			break
+		}
+	}
+}
+
+var (
+	sk string = ""
 )
 
 func main() {
 	flag.Parse()
 	port := *portFlag
 	host := *hostFlag
+	sk = *secretKey
+	serverPort := *webServerPort
+	go WebServer(serverPort)
 	log.Info("starting server ", "host", host, "port", port)
 	srv, err := wish.NewServer(
 
@@ -110,7 +164,6 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	projectsPosts, err := loadProjects()
 	if err != nil {
 		log.Error("Failed to load projects", "error", err)
-		// Fall back to empty projects list
 		projectsPosts = []Projects{}
 	}
 
@@ -131,6 +184,22 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	}
 	vp := viewport.New(pty.Window.Width, contentHeight)
 	vp.Style = renderer.NewStyle().Border(lipgloss.RoundedBorder())
+
+	ta := textarea.New()
+	ta.Placeholder = "Type your message here..."
+	ta.Focus()
+	ta.SetWidth(pty.Window.Width - 4)
+	ta.SetHeight(5)
+
+	nameInput := textinput.New()
+	nameInput.Placeholder = "Your name"
+	nameInput.Width = 30
+
+	username := s.User()
+	if username == "" {
+		username = "anonymous"
+	}
+
 	m := model{
 		term:           pty.Term,
 		profile:        renderer.ColorProfile().Name(),
@@ -145,6 +214,10 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		projectsPosts:  projectsPosts,
 		inProjectsList: true,
 		projectsList:   projectsList,
+		messageInput:   ta,
+		nameInput:      nameInput,
+		username:       username,
+		editingName:    false,
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
@@ -165,13 +238,12 @@ type model struct {
 	selectedPost   *Projects
 	inProjectsList bool
 	projectsList   list.Model
+	messageInput   textarea.Model
+	nameInput      textinput.Model
+	username       string
+	editingName    bool
+	messageSent    bool
 }
-
-var (
-	appStyle   = lipgloss.NewStyle().Padding(1, 2)
-	titleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
-	listStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#874BFD")).Padding(0, 0)
-)
 
 type ProjectsFile struct {
 	Projects []Projects `json:"projects"`
@@ -183,7 +255,6 @@ func loadProjects() ([]Projects, error) {
 		return nil, err
 	}
 
-	// Split the file by project separator
 	projectTexts := strings.Split(string(data), "---")
 	var projects []Projects
 
@@ -192,25 +263,24 @@ func loadProjects() ([]Projects, error) {
 			continue
 		}
 
-		// Parse each project
 		lines := strings.Split(strings.TrimSpace(text), "\n")
 		var project Projects
 		var contentLines []string
 
 		for i, line := range lines {
 			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "Title:") {
-				project.ProjectTitle = strings.TrimSpace(strings.TrimPrefix(line, "Title:"))
-			} else if strings.HasPrefix(line, "Number:") {
-				num, _ := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(line, "Number:")))
+
+			if title, found := strings.CutPrefix(line, "Title:"); found {
+				project.ProjectTitle = strings.TrimSpace(title)
+			} else if numStr, found := strings.CutPrefix(line, "Number:"); found {
+				num, _ := strconv.Atoi(strings.TrimSpace(numStr))
 				project.ProjectNumber = num
-			} else if line != "" || i > 2 { // After title and number, collect content
+			} else if line != "" || i > 2 {
 				contentLines = append(contentLines, line)
 			}
 		}
-
 		project.ProjectContent = strings.TrimSpace(strings.Join(contentLines, "\n"))
-		if project.ProjectTitle != "" { // Only add if we have at least a title
+		if project.ProjectTitle != "" {
 			projects = append(projects, project)
 		}
 	}
@@ -233,7 +303,7 @@ func (p Projects) Description() string {
 }
 func (p Projects) FilterValue() string { return p.ProjectTitle }
 func (m model) Init() tea.Cmd {
-	return nil
+	return textarea.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -246,7 +316,56 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = msg.Height - headerHeight - footerHeight
 		m.projectsList.SetWidth(msg.Width)
 		m.projectsList.SetHeight(msg.Height - headerHeight - footerHeight - 2)
+		m.messageInput.SetWidth(msg.Width - 4)
 	case tea.KeyMsg:
+		if m.state == "messages" && !m.messageSent {
+			if m.editingName {
+				switch msg.String() {
+				case "ctrl+c":
+					return m, tea.Quit
+				case "enter", "esc":
+					if strings.TrimSpace(m.nameInput.Value()) != "" {
+						m.username = strings.TrimSpace(m.nameInput.Value())
+					}
+					m.editingName = false
+					m.nameInput.Blur()
+					m.messageInput.Focus()
+					return m, nil
+				default:
+					var cmd tea.Cmd
+					m.nameInput, cmd = m.nameInput.Update(msg)
+					return m, cmd
+				}
+			} else {
+				switch msg.String() {
+				case "ctrl+c":
+					return m, tea.Quit
+				case "esc":
+					m.state = "home"
+					m.messageInput.Reset()
+					return m, nil
+				case "ctrl+n":
+					m.editingName = true
+					m.nameInput.SetValue(m.username)
+					m.nameInput.Focus()
+					m.messageInput.Blur()
+					return m, textinput.Blink
+				case "ctrl+s":
+					content := strings.TrimSpace(m.messageInput.Value())
+					if content != "" {
+						addMessage(m.username, content)
+						m.messageSent = true
+						m.messageInput.Reset()
+					}
+					return m, nil
+				default:
+					var cmd tea.Cmd
+					m.messageInput, cmd = m.messageInput.Update(msg)
+					return m, cmd
+				}
+			}
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -276,12 +395,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "p":
 			m.state = "projects"
 			m.inProjectsList = true
-		case "r":
-			m.state = "resume"
-			m.viewport.SetContent(getResumeContent())
 		case "c":
 			m.state = "contact"
 			m.viewport.SetContent(getContactContent())
+		case "m":
+			m.state = "messages"
+			m.messageSent = false
+			m.editingName = false
+			m.messageInput.Focus()
 		case "enter":
 			if m.state == "projects" && m.inProjectsList {
 				if i, ok := m.projectsList.SelectedItem().(Projects); ok {
@@ -322,36 +443,38 @@ func getBlogContent() string {
 	return `See w.willx86.com
 	Mostly mundane small tutorials, maybe I'll do something more with it one day...`
 }
-func getResumeContent() string {
-	return `
-EDUCATION
-University Of ******** (2027)
-BSc Computer Science with Artificial Intelligence- *******, UK
+func getMessagesContent(username string, messageSent bool, editingName bool, messageInput textarea.Model, nameInput textinput.Model) string {
+	if messageSent {
+		return `
+Thank you for your message!
 
-WORK EXPERIENCE
-********** Systems Engineer intern (2025)
-• Assembled PCB's via reflow oven etc
-• Start to finish designed and modelled *********
+It's currently making it's way through the internet.
+After that it'll be permanently burned into thermal receipt paper, on my desk
 
-***** ****** Software developer (2025) 
-• Created entire stack, backend to front-end 
-• Project was sensor based 
-
-Software Development Internship (2024)
-***** and **** - ******** , UK
-• Core Rust developer for CO2 recording software
-• Implemented cross-platform release workflow
-• Designed and created HTTP server/DB infrastructure
-
-TECHNICAL SKILLS
-Primary:
-• GoLang, Rust, Devops, Linux
-Secondary:
-• STM32CubeIDE with C, Python, Java, React, NodeJS, Arduino C++/ESP-IDF
-
-INTERESTS
-Hackathons, Weightlifting, Running, 3D Printing, Electronics
+Press 'o' to return home or 'm' to send another message.
 `
+	}
+
+	if editingName {
+		return fmt.Sprintf(`
+Leave a message for will-x86
+
+Change your name:
+%s
+
+Press Enter to confirm | Esc to cancel
+`, nameInput.View())
+	}
+
+	return fmt.Sprintf(`
+Leave a message for will-x86
+
+Signed in as: %s
+
+%s
+
+Press Ctrl+N to change name | Ctrl+S to send | Esc to cancel
+`, username, messageInput.View())
 }
 
 func getContactContent() string {
@@ -384,10 +507,6 @@ func (m model) View() string {
 			content = contentStyle.
 				Render(m.viewport.View())
 		}
-	case "resume":
-		content = contentStyle.
-			Align(lipgloss.Center, lipgloss.Center).
-			Render(getResumeContent())
 	case "contact":
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
@@ -396,13 +515,17 @@ func (m model) View() string {
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
 			Render(getBlogContent())
+	case "messages":
+		content = contentStyle.
+			Align(lipgloss.Center, lipgloss.Top).
+			Render(getMessagesContent(m.username, m.messageSent, m.editingName, m.messageInput, m.nameInput))
 	default:
 		content = contentStyle.
 			Align(lipgloss.Center, lipgloss.Center).
 			Render("Welcome! Use the controls below to navigate.")
 	}
 
-	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • b: blog •  c: contact")
+	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • b: blog •  c: contact • message me!")
 	if m.state == "projects" && m.inProjectsList {
 		controls += m.quitStyle.Render(" • [0-9]: select post")
 	}
