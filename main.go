@@ -439,7 +439,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func getBlogContent() string {
 	return `See w.willx86.com
-	Mostly mundane small tutorials, maybe I'll do something more with it one day...`
+	Mostly mundane small tutorials, maybe I'll do something more with it one day...
+	Update! You can now see how I made the "message" feature you can see by pressing 'm'`
 }
 func getMessagesContent(username string, messageSent bool, editingName bool, messageInput textarea.Model, nameInput textinput.Model) string {
 	if messageSent {
