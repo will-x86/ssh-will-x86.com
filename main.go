@@ -549,7 +549,7 @@ func (m model) View() string {
 			Render("Welcome! Use the controls below to navigate.")
 	}
 
-	controls := m.quitStyle.Render("q: quit • o: home • p: projects • r: resume • b: blog •  c: contact • message me!")
+	controls := m.quitStyle.Render("q: quit • o: home • p: projects • b: blog •  c: contact • message me!")
 	if m.state == "projects" && m.inProjectsList {
 		controls += m.quitStyle.Render(" • [0-9]: select post")
 	}
