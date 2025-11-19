@@ -468,7 +468,7 @@ Thank you for your message!
 It's currently making it's way through the internet.
 After that it'll be permanently burned into thermal receipt paper, on my desk
 
-See https://w.willx86/2025/11/06/printing-messages-from-my-site.html for more details ! 
+See https://w.willx86.com/2025/11/06/printing-messages-from-my-site.html for more details ! 
 
 
 Press 'o' to return home or 'm' to send another message.

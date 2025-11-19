@@ -36,10 +36,19 @@ Number: 3
 - Primarily learning experiment. 
 
 ---
-Tite: Printing messages from my site 
+Title: Printing messages from my site 
 Number: 4 
 - Used an ESP32C3 to receive messages from SSH site
 - Printed them onto a mini thermal printer on my desk
 - Press "m" to message me! 
-- https://w.willx86/2025/11/06/printing-messages-from-my-site.html 
+- https://w.willx86.com/2025/11/06/printing-messages-from-my-site.html 
+---
+Title: CO2 Sensor on CH32v003 (10 cent MCU!!)
+Number: 5 
+- Used a CH32v003F4P6 on a custom PCB 
+- 2 SK6812 for communicating CO2 levels
+- The CH32v003 has a *single* wire debug, no SWCLK! 
+- Manufactered by JLCPCB 
+- Coded using CH32fun framework https://github.com/cnlohr/ch32fun
+
 
