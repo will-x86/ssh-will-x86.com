@@ -11,8 +11,8 @@ import (
 
 var secretKey string
 
-func WebServer(port, secretKey string) {
-	secretKey = secretKey
+func WebServer(port, sk string) {
+	secretKey = sk
 	http.HandleFunc("/messages/latest", recoverWrap(handler))
 
 	log.Infof("Starting webserver on :%s", port)
