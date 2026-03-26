@@ -1,4 +1,4 @@
-module ssh-will-x86
+module github.com/will-x86/ssh-will-x86
 
 go 1.25.0
 

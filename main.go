@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/charmbracelet/wish/activeterm"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
+	"github.com/will-x86/ssh-will-x86/pkg/server"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -55,48 +55,6 @@ var (
 	secretKey     = flag.String("sK", os.Getenv("SECRET_KEY"), "secretKey for receiving messages")
 )
 
-type Message struct {
-	From      string
-	Content   string
-	Timestamp time.Time
-}
-
-var (
-	messages   []Message
-	messagesMu sync.RWMutex
-)
-
-func addMessage(from, content string) {
-	messagesMu.Lock()
-	defer messagesMu.Unlock()
-	messages = append(messages, Message{
-		From:      from,
-		Content:   content,
-		Timestamp: time.Now(),
-	})
-	log.Info("New message saved", "from", from, "content", content)
-}
-
-func getMessages() []Message {
-	messagesMu.RLock()
-	defer messagesMu.RUnlock()
-	msgCopy := make([]Message, len(messages))
-	copy(msgCopy, messages)
-	return msgCopy
-}
-
-func removeMessage(from, content string) {
-	messagesMu.Lock()
-	defer messagesMu.Unlock()
-
-	for i := range messages {
-		if messages[i].Content == content && messages[i].From == from {
-			messages = append(messages[:i], messages[i+1:]...)
-			break
-		}
-	}
-}
-
 func main() {
 	flag.Parse()
 	if *secretKey == "" {
@@ -105,12 +63,11 @@ func main() {
 	port := *portFlag
 	host := *hostFlag
 	serverPort := *webServerPort
-	go WebServer(serverPort)
+	go server.WebServer(serverPort, *secretKey)
 	log.Info("starting server ", "host", host, "port", port)
 	srv, err := wish.NewServer(
 
 		wish.WithAddress(net.JoinHostPort(host, port)),
-
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		wish.WithKeyboardInteractiveAuth(func(ctx ssh.Context, challenger gossh.KeyboardInteractiveChallenge) bool {
 			log.Info("keyboard interactive challenge")
@@ -365,7 +322,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.tooLong = true
 							m.messageInput.Reset()
 						} else {
-							addMessage(m.username, content)
+							server.AddMessage(m.username, content)
 							m.messageSent = true
 							m.tooLong = false
 
