@@ -3,8 +3,9 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = []
-  bin = "./main -host localhost -port 23234 -sK=hey"
+  args_bin = ["-host", "localhost", "-port", "23234", "-sK=hey"]
+  #bin = "./main -host localhost -port 23234 -sK=hey"
+  bin = "./main"
   cmd = "make build"
   delay = 1000
   exclude_dir = [".direnv","tmp",".ssh"]
