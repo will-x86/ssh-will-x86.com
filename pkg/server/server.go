@@ -149,11 +149,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if workerURL != "" {
 		body, workerErr := fetchFromWorker()
 		if !workerErr {
-			log.Infof("Got message from worker: %s", body)
 			if body == "" {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
+			log.Infof("Got message from worker: %s", body)
 			w.Header().Set("Content-Type", "text/plain")
 			_, _ = fmt.Fprint(w, body)
 			return
