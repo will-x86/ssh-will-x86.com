@@ -3,9 +3,9 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = ["-host", "localhost", "-port", "23234", "-sK=hey"]
-  #bin = "./main -host localhost -port 23234 -sK=hey"
+  args_bin = []
   bin = "./main"
+  full_bin = "env $(grep -v '^#' .env | xargs) ./main -host localhost -port 23234 -sK=hey"
   cmd = "make build"
   delay = 1000
   exclude_dir = [".direnv","tmp",".ssh"]
@@ -13,7 +13,6 @@ tmp_dir = "tmp"
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
   follow_symlink = false
-  full_bin = ""
   include_dir = []
   include_ext = ["go", "tpl", "tmpl", "html"]
   include_file = []

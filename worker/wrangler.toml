@@ -1,0 +1,7 @@
+name = "receipt-paper"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "MESSAGES"
+id = "ae672496b8a44940a20e05d3870fd5da"

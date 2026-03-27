@@ -5,18 +5,21 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-  }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
     flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [];
+          overlays = [ ];
         };
-      in {
+      in
+      {
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             go
@@ -27,6 +30,7 @@
             godef
             golint
             air
+            wrangler
 
           ];
 

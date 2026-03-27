@@ -1,46 +1,25 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-
-# Test binary, built with "go test -c"
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
-go.work
+# Build output
+main
 tmp/
 
-# IDE specific files
-.vscode
-.idea
+# Go
+*.test
+*.out
+go.work
 
-# .env file
+# Node (worker/)
+worker/node_modules/
+
+# Environment / secrets
 .env
 .direnv
 
-# Project build
-main
-*templ.go
+# IDE
+.vscode
+.idea
 
-# OS X generated file
+# OS
 .DS_Store
 
-# Log files 
-/logs
-traefik/acme.json
-
-
-#Direnv
-.direnv
-
-#Wish specific
+# SSH host keys (wish)
 .ssh

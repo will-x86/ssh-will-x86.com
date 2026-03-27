@@ -39,5 +39,7 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > /etc/systemd/system/ssh-will-x86.com.env
+            echo "CF_WORKER_URL=${{ secrets.CF_WORKER_URL }}" >> /etc/systemd/system/ssh-will-x86.com.env
+            echo "CF_WORKER_SECRET=${{ secrets.CF_WORKER_SECRET }}" >> /etc/systemd/system/ssh-will-x86.com.env
             systemctl daemon-reload
             systemctl restart ssh-will-x86.com

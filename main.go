@@ -17,10 +17,12 @@ import (
 )
 
 var (
-	hostFlag      = flag.String("host", "0.0.0.0", "Host to listen on")
-	portFlag      = flag.String("port", "22", "Port to listen on")
-	webServerPort = flag.String("webserver-port", "9000", "Port for the HTTP message server")
-	secretKey     = flag.String("sK", os.Getenv("SECRET_KEY"), "Secret key for the message endpoint")
+	hostFlag       = flag.String("host", "0.0.0.0", "Host to listen on")
+	portFlag       = flag.String("port", "22", "Port to listen on")
+	webServerPort  = flag.String("webserver-port", "9000", "Port for the HTTP message server")
+	secretKey      = flag.String("sK", os.Getenv("SECRET_KEY"), "Secret key for the message endpoint")
+	cfWorkerURL    = flag.String("cfWorkerURL", os.Getenv("CF_WORKER_URL"), "Cloudflare Worker URL for persistent message storage")
+	cfWorkerSecret = flag.String("cfWorkerSecret", os.Getenv("CF_WORKER_SECRET"), "Cloudflare Worker secret")
 )
 
 func main() {
@@ -29,7 +31,7 @@ func main() {
 		panic("no key set")
 	}
 
-	go server.WebServer(*webServerPort, *secretKey)
+	go server.WebServer(*webServerPort, *secretKey, *cfWorkerURL, *cfWorkerSecret)
 
 	srv, err := sshserver.NewServer(*hostFlag, *portFlag, ui.NewTeaHandler())
 	if err != nil {
