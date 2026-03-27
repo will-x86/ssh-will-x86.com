@@ -21,3 +21,9 @@ Then in a new window type:
 ```
 ssh -p 23234 localhost
 ```
+
+
+
+This project now uses cloudflare workers to store messages via ssh, read KV_CLOUDFLARE.md for more info.
+
+Alternatively, it uses a memory fallback which was used previously

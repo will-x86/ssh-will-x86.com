@@ -18,7 +18,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
   "kv_namespaces": [
     {
       "binding": "receipt_paper",
-      "id": "ae672496b8a44940a20e05d3870fd5da"
+      "id": "IDHERE"
     }
   ]
 }
