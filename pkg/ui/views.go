@@ -113,6 +113,7 @@ Press 'o' to return home or 'm' to send another message.
 	}
 	if m.editingName {
 		return fmt.Sprintf(`
+(Currently printer is deactivated, I'm moving house !)
 Leave a message 
 
 Change your name:
